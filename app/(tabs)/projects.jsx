@@ -19,10 +19,12 @@ import { CATEGORIES, STATUS_OPTIONS } from '../../constants/categories';
 import SearchBar from '../../components/SearchBar';
 import ProjectCard from '../../components/ProjectCard';
 import EmptyState from '../../components/EmptyState';
+import { getDeadlineInfo } from '../../utils/deadlines';
 
 const SORT_LABELS = {
   newest: 'Newest First',
   oldest: 'Oldest First',
+  deadline_asc: 'Earliest Deadline',
   name_asc: 'Name A–Z',
   name_desc: 'Name Z–A',
   updated: 'Recently Updated',
@@ -31,6 +33,7 @@ const SORT_LABELS = {
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest First', icon: 'sort-calendar-descending' },
   { value: 'oldest', label: 'Oldest First', icon: 'sort-calendar-ascending' },
+  { value: 'deadline_asc', label: 'Earliest Deadline', icon: 'calendar-clock' },
   { value: 'name_asc', label: 'Name A–Z', icon: 'sort-alphabetical-ascending' },
   { value: 'name_desc', label: 'Name Z–A', icon: 'sort-alphabetical-descending' },
   { value: 'updated', label: 'Recently Updated', icon: 'clock-outline' },
@@ -54,6 +57,7 @@ export default function ProjectsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
+  const [deadlineFilter, setDeadlineFilter] = useState('all');
   const [activeSort, setActiveSort] = useState(defaultSort || 'newest');
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -64,12 +68,15 @@ export default function ProjectsScreen() {
     }
   }, [defaultSort]);
 
-  // If navigated here with a category param (from Home or Categories screen), apply it
+  // If navigated here with a category param or sort param, apply it
   useEffect(() => {
     if (params?.selectedCategory) {
       setSelectedCategory(params.selectedCategory);
     }
-  }, [params?.selectedCategory]);
+    if (params?.activeSort) {
+      setActiveSort(params.activeSort);
+    }
+  }, [params?.selectedCategory, params?.activeSort]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -90,6 +97,18 @@ export default function ProjectsScreen() {
         selectedStatus === 'All' ||
         project.status?.toLowerCase() === selectedStatus.toLowerCase();
 
+      // Deadline filter match
+      let matchesDeadline = true;
+      if (deadlineFilter === 'has_deadline') {
+        matchesDeadline = !!(project.deadline_date && project.deadline_date.trim() !== '');
+      } else if (deadlineFilter === 'upcoming') {
+        const info = getDeadlineInfo(project.deadline_date, project.status);
+        matchesDeadline = !!info && (info.statusKey === 'upcoming' || info.statusKey === 'due_today');
+      } else if (deadlineFilter === 'overdue') {
+        const info = getDeadlineInfo(project.deadline_date, project.status);
+        matchesDeadline = !!info && info.statusKey === 'overdue';
+      }
+
       // Search match
       const query = searchQuery.trim().toLowerCase();
       const matchesSearch =
@@ -98,10 +117,20 @@ export default function ProjectsScreen() {
         project.description?.toLowerCase().includes(query) ||
         project.software?.toLowerCase().includes(query);
 
-      return matchesCategory && matchesStatus && matchesSearch;
+      return matchesCategory && matchesStatus && matchesDeadline && matchesSearch;
     });
 
     return list.sort((a, b) => {
+      if (activeSort === 'deadline_asc') {
+        const hasA = !!(a.deadline_date && a.deadline_date.trim() !== '');
+        const hasB = !!(b.deadline_date && b.deadline_date.trim() !== '');
+        if (hasA && hasB) {
+          return a.deadline_date.localeCompare(b.deadline_date) || (b.id - a.id);
+        }
+        if (hasA) return -1;
+        if (hasB) return 1;
+        return (b.created_date || '').localeCompare(a.created_date || '') || b.id - a.id;
+      }
       if (activeSort === 'newest') {
         return (b.created_date || '').localeCompare(a.created_date || '') || b.id - a.id;
       }
@@ -119,16 +148,18 @@ export default function ProjectsScreen() {
       }
       return 0;
     });
-  }, [projects, selectedCategory, selectedStatus, searchQuery, activeSort]);
+  }, [projects, selectedCategory, selectedStatus, deadlineFilter, searchQuery, activeSort]);
 
   const activeFiltersCount =
     (selectedCategory !== 'All' ? 1 : 0) +
     (selectedStatus !== 'All' ? 1 : 0) +
+    (deadlineFilter !== 'all' ? 1 : 0) +
     (searchQuery.trim() !== '' ? 1 : 0);
 
   const clearAllFilters = () => {
     setSelectedCategory('All');
     setSelectedStatus('All');
+    setDeadlineFilter('all');
     setSearchQuery('');
   };
 
@@ -262,6 +293,49 @@ export default function ProjectsScreen() {
                   ]}
                 >
                   {status.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Deadline Filter Chips */}
+      <View style={styles.deadlineFiltersSection}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScroll}
+        >
+          {[
+            { label: 'All Projects', value: 'all', icon: 'calendar-range' },
+            { label: 'With Deadlines', value: 'has_deadline', icon: 'calendar-clock' },
+            { label: 'Upcoming', value: 'upcoming', icon: 'clock-outline' },
+            { label: 'Overdue', value: 'overdue', icon: 'calendar-alert' },
+          ].map((item) => {
+            const isActive = deadlineFilter === item.value;
+            return (
+              <TouchableOpacity
+                key={item.value}
+                style={[
+                  styles.deadlineFilterChip,
+                  isActive && styles.deadlineFilterChipActive,
+                ]}
+                onPress={() => setDeadlineFilter(item.value)}
+              >
+                <MaterialCommunityIcons
+                  name={item.icon}
+                  size={13}
+                  color={isActive ? COLORS.white : (isDark ? COLORS.textSecondary : COLORS.primary)}
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={[
+                    styles.deadlineFilterChipText,
+                    isActive && styles.deadlineFilterChipTextActive,
+                  ]}
+                >
+                  {item.label}
                 </Text>
               </TouchableOpacity>
             );
@@ -457,6 +531,33 @@ const getStyles = (COLORS, isDark) => StyleSheet.create({
   statusFiltersSection: {
     marginTop: SPACING.xs,
     marginBottom: SPACING.xs,
+  },
+  deadlineFiltersSection: {
+    marginBottom: SPACING.xs,
+  },
+  deadlineFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : '#F8FAFC',
+    borderWidth: 1,
+    borderColor: isDark ? COLORS.border : '#E2E8F0',
+    marginRight: 6,
+  },
+  deadlineFilterChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  deadlineFilterChipText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  deadlineFilterChipTextActive: {
+    color: COLORS.white,
+    fontWeight: '700',
   },
   filterScroll: {
     paddingHorizontal: SPACING.md,

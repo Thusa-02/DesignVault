@@ -39,6 +39,7 @@ export default function EditProjectScreen() {
   const [customSoftware, setCustomSoftware] = useState('');
   const [status, setStatus] = useState('In Progress');
   const [createdDate, setCreatedDate] = useState('');
+  const [deadlineDate, setDeadlineDate] = useState(null);
   const [artworks, setArtworks] = useState([]);
 
   const [titleError, setTitleError] = useState('');
@@ -57,6 +58,7 @@ export default function EditProjectScreen() {
           setCategory(found.category || CATEGORIES[0].name);
           setStatus(found.status || 'In Progress');
           setCreatedDate(found.created_date || '');
+          setDeadlineDate(found.deadline_date || null);
 
           let initialArtworks = found.artworks || [];
           if (initialArtworks.length === 0 && found.image_uri) {
@@ -136,6 +138,7 @@ export default function EditProjectScreen() {
         software: softwareString,
         status,
         created_date: createdDate,
+        deadline_date: deadlineDate || null,
         artworks: artworks,
       });
 
@@ -409,6 +412,17 @@ export default function EditProjectScreen() {
             onChange={setCreatedDate}
             label="Creation Date"
             maxDate={new Date()}
+          />
+        </View>
+
+        {/* Deadline Date Picker (Optional) */}
+        <View style={styles.section}>
+          <DatePickerField
+            value={deadlineDate}
+            onChange={setDeadlineDate}
+            label="Project Deadline (Optional)"
+            placeholder="No deadline set (optional)"
+            allowClear={true}
           />
         </View>
 

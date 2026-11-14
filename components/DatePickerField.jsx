@@ -65,22 +65,25 @@ export default function DatePickerField({
   value,
   onChange,
   label = 'Creation Date',
-  maxDate = new Date(),
+  maxDate,
+  minDate,
+  placeholder = 'Select Date',
+  allowClear = false,
+  onClear,
   style,
 }) {
   const { colors: COLORS, isDark } = useTheme();
   const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
   const [showPicker, setShowPicker] = useState(false);
 
-  // Convert current ISO string value to Date object for picker
-  const currentDate = parseISOToDate(value);
+  // Convert current ISO string value to Date object for picker, or default to today
+  const currentDate = value ? parseISOToDate(value) : new Date();
 
-  const handleDateChange = (event, selectedDate) => {
-    // Hide picker on Android immediately after selection or dismissal
+  const handleValueChange = (event, selectedDate) => {
+    // Close picker immediately upon date selection
     setShowPicker(false);
 
-    // If dismissed/cancelled, retain existing date
-    if (event.type === 'dismissed' || !selectedDate) {
+    if (!selectedDate) {
       return;
     }
 
@@ -88,6 +91,25 @@ export default function DatePickerField({
     const isoString = formatDateToISO(selectedDate);
     if (onChange) {
       onChange(isoString);
+    }
+  };
+
+  const handleDismiss = () => {
+    // Close picker when cancelled or dismissed without modifying date
+    setShowPicker(false);
+  };
+
+  const handleNeutralButtonPress = () => {
+    // Close picker if neutral button is pressed
+    setShowPicker(false);
+  };
+
+  const handleClear = (e) => {
+    e.stopPropagation?.();
+    if (onClear) {
+      onClear();
+    } else if (onChange) {
+      onChange(null);
     }
   };
 
@@ -102,25 +124,45 @@ export default function DatePickerField({
       >
         <View style={styles.iconBadge}>
           <MaterialCommunityIcons
-            name="calendar-month-outline"
+            name={value ? "calendar-month-outline" : "calendar-clock-outline"}
             size={22}
-            color={COLORS.primary}
+            color={value ? COLORS.primary : COLORS.textMuted}
           />
         </View>
 
         <View style={styles.textContainer}>
-          <Text style={styles.readableDate}>
-            {formatReadableDate(value || formatDateToISO(new Date()))}
+          <Text style={[styles.readableDate, !value && styles.placeholderText]}>
+            {value ? formatReadableDate(value) : placeholder}
           </Text>
         </View>
 
-        <View style={styles.actionChip}>
-          <MaterialCommunityIcons
-            name="calendar-edit"
-            size={16}
-            color={COLORS.primary}
-          />
-          <Text style={styles.actionChipText}>Change</Text>
+        <View style={styles.actionsGroup}>
+          {allowClear && !!value && (
+            <TouchableOpacity
+              style={styles.clearChip}
+              activeOpacity={0.7}
+              onPress={handleClear}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <MaterialCommunityIcons
+                name="close-circle-outline"
+                size={16}
+                color={COLORS.textMuted}
+              />
+              <Text style={styles.clearChipText}>Clear</Text>
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.actionChip}>
+            <MaterialCommunityIcons
+              name="calendar-edit"
+              size={16}
+              color={COLORS.primary}
+            />
+            <Text style={styles.actionChipText}>
+              {value ? 'Change' : 'Set Date'}
+            </Text>
+          </View>
         </View>
       </TouchableOpacity>
 
@@ -129,8 +171,11 @@ export default function DatePickerField({
           value={currentDate}
           mode="date"
           display={Platform.OS === 'android' ? 'default' : 'spinner'}
-          maximumDate={maxDate}
-          onChange={handleDateChange}
+          maximumDate={maxDate || undefined}
+          minimumDate={minDate || undefined}
+          onValueChange={handleValueChange}
+          onDismiss={handleDismiss}
+          onNeutralButtonPress={handleNeutralButtonPress}
           accentColor={COLORS.primary}
           themeVariant={isDark ? 'dark' : 'light'}
         />
@@ -177,6 +222,29 @@ const getStyles = (COLORS, isDark) => StyleSheet.create({
     fontWeight: '700',
     color: COLORS.text,
     letterSpacing: 0.2,
+  },
+  placeholderText: {
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  actionsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  clearChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDark ? COLORS.surfaceSubtle : '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: RADIUS.full,
+    gap: 3,
+  },
+  clearChipText: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
   },
   actionChip: {
     flexDirection: 'row',

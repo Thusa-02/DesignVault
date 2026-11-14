@@ -22,6 +22,8 @@ import ArtworkGalleryViewer from '../../components/ArtworkGalleryViewer';
 import ProjectColorPalette from '../../components/ProjectColorPalette';
 import ProjectTaskChecklist from '../../components/ProjectTaskChecklist';
 import ProjectNotes from '../../components/ProjectNotes';
+import DeadlineBadge from '../../components/DeadlineBadge';
+import { getDeadlineInfo } from '../../utils/deadlines';
 
 export default function ProjectDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -95,6 +97,8 @@ export default function ProjectDetailsScreen() {
       : primaryUri
       ? [{ id: 0, image_uri: primaryUri, artwork_title: project.title }]
       : [];
+
+  const deadlineInfo = getDeadlineInfo(project.deadline_date, project.status);
 
   const openViewerAtIndex = (index) => {
     setActiveViewerIndex(index);
@@ -249,6 +253,51 @@ export default function ProjectDetailsScreen() {
                 {isFav ? 'Favourited' : 'Add to Favs'}
               </Text>
             </TouchableOpacity>
+          </View>
+
+          {/* Deadline Tracker Card */}
+          <View style={styles.deadlineContainer}>
+            <View style={styles.deadlineContainerLeft}>
+              <View
+                style={[
+                  styles.deadlineIconBox,
+                  {
+                    backgroundColor: deadlineInfo
+                      ? (isDark ? `${deadlineInfo.badgeColor}25` : deadlineInfo.badgeBg)
+                      : (isDark ? COLORS.surfaceSubtle : '#F1F5F9'),
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name={deadlineInfo ? deadlineInfo.icon : 'calendar-clock-outline'}
+                  size={20}
+                  color={deadlineInfo ? deadlineInfo.badgeColor : COLORS.textMuted}
+                />
+              </View>
+              <View style={styles.deadlineContainerText}>
+                <Text style={styles.deadlineLabelTitle}>Project Deadline</Text>
+                <Text style={styles.deadlineDateText}>
+                  {project.deadline_date ? formatReadableDate(project.deadline_date) : 'No deadline set'}
+                </Text>
+              </View>
+            </View>
+
+            {deadlineInfo ? (
+              <DeadlineBadge
+                deadlineDate={project.deadline_date}
+                status={project.status}
+                compact={false}
+              />
+            ) : (
+              <TouchableOpacity
+                style={styles.addDeadlineBtn}
+                activeOpacity={0.7}
+                onPress={() => router.push(`/project/edit/${project.id}`)}
+              >
+                <MaterialCommunityIcons name="plus" size={14} color={COLORS.primary} />
+                <Text style={styles.addDeadlineBtnText}>Set Deadline</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Divider */}
@@ -538,6 +587,63 @@ const getStyles = (COLORS, isDark) => StyleSheet.create({
   favBadgeTextActive: {
     color: COLORS.danger,
     fontWeight: '700',
+  },
+  deadlineContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: isDark ? COLORS.surfaceSubtle : '#F8FAFC',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.sm,
+    gap: 10,
+  },
+  deadlineContainerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+  },
+  deadlineIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deadlineContainerText: {
+    flex: 1,
+  },
+  deadlineLabelTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  deadlineDateText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: 2,
+  },
+  addDeadlineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDark ? COLORS.surface : COLORS.secondary,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+    gap: 4,
+  },
+  addDeadlineBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   divider: {
     height: 1,

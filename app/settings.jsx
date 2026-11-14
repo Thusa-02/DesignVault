@@ -29,9 +29,9 @@ const SORT_OPTIONS = [
 ];
 
 const THEME_OPTIONS = [
-  { value: 'light', label: 'Light Mode', icon: 'weather-sunny' },
-  { value: 'dark', label: 'Dark Mode', icon: 'weather-night' },
-  { value: 'system', label: 'System Default', icon: 'cellphone-cog' },
+  { value: 'light', label: 'Light', icon: 'weather-sunny' },
+  { value: 'dark', label: 'Dark', icon: 'weather-night' },
+  { value: 'midnight', label: 'Midnight Purple', icon: 'moon-waning-crescent' },
 ];
 
 export default function SettingsScreen() {
@@ -246,7 +246,7 @@ export default function SettingsScreen() {
             </Text>
           </View>
           <Text style={[styles.sectionDesc, { color: themeColors.textSecondary }]}>
-            Choose between Light, Dark, or automatically match device system appearance.
+            Choose between Light, Dark, or Midnight Purple appearance.
           </Text>
 
           <View style={styles.themeGrid}>
@@ -261,7 +261,7 @@ export default function SettingsScreen() {
                     isSelected && {
                       borderColor: themeColors.primary,
                       borderWidth: 2,
-                      backgroundColor: themeColors.secondary,
+                      backgroundColor: isDark ? `${themeColors.primary}22` : themeColors.secondary,
                     },
                   ]}
                   activeOpacity={0.8}
