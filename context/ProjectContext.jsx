@@ -16,15 +16,13 @@ import { CATEGORIES as DEFAULT_CATEGORIES } from '../constants/categories';
 const ProjectContext = createContext(null);
 
 export function ProjectProvider({ children }) {
-  const deviceColorScheme = useColorScheme();
-
   const [projects, setProjects] = useState([]);
   const [userName, setUserNameState] = useState(null);
   const [profileImageUri, setProfileImageUri] = useState(null);
   const [userNameLoading, setUserNameLoading] = useState(true);
 
-  // Settings preferences
-  const [themePreference, setThemePreferenceState] = useState('system');
+  // Settings preferences (Light, Dark, Midnight Purple)
+  const [themePreference, setThemePreferenceState] = useState('light');
   const [defaultSort, setDefaultSortState] = useState('newest');
   const [galleryLayout, setGalleryLayoutState] = useState('grid');
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
@@ -44,12 +42,10 @@ export function ProjectProvider({ children }) {
 
   // Dynamic Theme Calculation
   const isDark = useMemo(() => {
-    if (themePreference === 'dark') return true;
-    if (themePreference === 'light') return false;
-    return deviceColorScheme === 'dark';
-  }, [themePreference, deviceColorScheme]);
+    return themePreference === 'dark' || themePreference === 'midnight';
+  }, [themePreference]);
 
-  const themeColors = useMemo(() => getThemeColors(isDark), [isDark]);
+  const themeColors = useMemo(() => getThemeColors(themePreference), [themePreference]);
 
   const loadData = async () => {
     try {
@@ -75,7 +71,7 @@ export function ProjectProvider({ children }) {
       setStats(statistics);
       setUserNameState(userProfile?.name || null);
       setProfileImageUri(userProfile?.profileImageUri || null);
-      setThemePreferenceState(themePref || 'system');
+      setThemePreferenceState(themePref || 'light');
       setDefaultSortState(sortPref || 'newest');
       setGalleryLayoutState(galleryPref || 'grid');
 

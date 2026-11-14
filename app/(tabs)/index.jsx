@@ -18,7 +18,10 @@ import { CATEGORIES } from '../../constants/categories';
 import StatCard from '../../components/StatCard';
 import ProjectCard from '../../components/ProjectCard';
 import EmptyState from '../../components/EmptyState';
+import DeadlineBadge from '../../components/DeadlineBadge';
+import { formatReadableDate } from '../../components/DatePickerField';
 import { getPersonalizedGreeting } from '../../utils/greeting';
+import { getUpcomingDeadlines } from '../../utils/deadlines';
 
 export default function HomeDashboardScreen() {
   const router = useRouter();
@@ -27,6 +30,7 @@ export default function HomeDashboardScreen() {
   const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
 
   const {
+    projects,
     stats,
     userName,
     profileImageUri,
@@ -38,6 +42,7 @@ export default function HomeDashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const greeting = getPersonalizedGreeting(userName);
+  const upcomingDeadlines = useMemo(() => getUpcomingDeadlines(projects, 5), [projects]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -215,6 +220,102 @@ export default function HomeDashboardScreen() {
           );
         })}
       </ScrollView>
+
+      {/* Upcoming Deadlines Section */}
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionHeaderTitleGroup}>
+          <MaterialCommunityIcons name="calendar-clock" size={20} color={COLORS.primary} style={{ marginRight: 6 }} />
+          <Text style={styles.sectionTitle}>Upcoming Deadlines</Text>
+        </View>
+        {upcomingDeadlines.length > 0 && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => router.push({ pathname: '/projects', params: { activeSort: 'deadline_asc' } })}
+          >
+            <Text style={styles.seeAllText}>View All ({upcomingDeadlines.length})</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {upcomingDeadlines.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.deadlinesScroll}
+        >
+          {upcomingDeadlines.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.deadlineCard,
+                item.deadlineInfo.isOverdue && styles.deadlineCardOverdue,
+                item.deadlineInfo.isDueToday && styles.deadlineCardDueToday,
+              ]}
+              activeOpacity={0.88}
+              onPress={() => router.push(`/project/${item.id}`)}
+            >
+              <View style={styles.deadlineCardTop}>
+                <View
+                  style={[
+                    styles.deadlineCategoryPill,
+                    { backgroundColor: isDark ? `${COLORS.primary}25` : COLORS.secondary },
+                  ]}
+                >
+                  <Text style={styles.deadlineCategoryText} numberOfLines={1}>
+                    {item.category}
+                  </Text>
+                </View>
+                <DeadlineBadge
+                  deadlineDate={item.deadline_date}
+                  status={item.status}
+                  compact={true}
+                  showDays={true}
+                />
+              </View>
+
+              <Text style={styles.deadlineCardTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+
+              <View style={styles.deadlineCardFooter}>
+                <View style={styles.deadlineDateGroup}>
+                  <MaterialCommunityIcons
+                    name="calendar-month-outline"
+                    size={14}
+                    color={COLORS.textMuted}
+                  />
+                  <Text style={styles.deadlineDateLabel}>
+                    {formatReadableDate(item.deadline_date)}
+                  </Text>
+                </View>
+                <View style={styles.deadlineArrowBox}>
+                  <MaterialCommunityIcons
+                    name="arrow-right"
+                    size={14}
+                    color={COLORS.primary}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={styles.deadlineEmptyCard}>
+          <View style={styles.deadlineEmptyIconBox}>
+            <MaterialCommunityIcons
+              name="calendar-check-outline"
+              size={24}
+              color={COLORS.primary}
+            />
+          </View>
+          <View style={styles.deadlineEmptyTextGroup}>
+            <Text style={styles.deadlineEmptyTitle}>No Pending Deadlines</Text>
+            <Text style={styles.deadlineEmptySubtitle}>
+              All set! Add deadlines when creating projects to track deliverables.
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Recently Added Projects */}
       <View style={styles.sectionHeader}>
@@ -438,5 +539,118 @@ const getStyles = (COLORS, isDark) => StyleSheet.create({
   recentScroll: {
     paddingVertical: SPACING.xs,
     paddingRight: SPACING.md,
+  },
+  sectionHeaderTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deadlinesScroll: {
+    paddingVertical: SPACING.xs,
+    paddingRight: SPACING.md,
+    gap: SPACING.md,
+  },
+  deadlineCard: {
+    width: 250,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginRight: SPACING.md,
+    borderWidth: 1.5,
+    borderColor: isDark ? COLORS.border : '#E2E8F0',
+    ...SHADOWS.card,
+  },
+  deadlineCardOverdue: {
+    borderColor: isDark ? '#EF444460' : '#FECACA',
+    backgroundColor: isDark ? '#2B1216' : '#FFF5F5',
+  },
+  deadlineCardDueToday: {
+    borderColor: isDark ? '#F59E0B60' : '#FDE68A',
+    backgroundColor: isDark ? '#2B1E0C' : '#FFFDF5',
+  },
+  deadlineCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  deadlineCategoryPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+    maxWidth: '50%',
+  },
+  deadlineCategoryText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.primaryDark,
+    textTransform: 'uppercase',
+  },
+  deadlineCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+    lineHeight: 20,
+    marginBottom: 12,
+    minHeight: 40,
+  },
+  deadlineCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+  },
+  deadlineDateGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  deadlineDateLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  deadlineArrowBox: {
+    width: 24,
+    height: 24,
+    borderRadius: RADIUS.full,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deadlineEmptyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginVertical: SPACING.xs,
+    gap: 12,
+    ...SHADOWS.card,
+  },
+  deadlineEmptyIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.md,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deadlineEmptyTextGroup: {
+    flex: 1,
+  },
+  deadlineEmptyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  deadlineEmptySubtitle: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    lineHeight: 16,
   },
 });

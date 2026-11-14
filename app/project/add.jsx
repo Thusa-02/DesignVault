@@ -36,6 +36,7 @@ export default function AddProjectScreen() {
   const [customSoftware, setCustomSoftware] = useState('');
   const [status, setStatus] = useState('In Progress');
   const [createdDate, setCreatedDate] = useState(formatDateToISO(new Date()));
+  const [deadlineDate, setDeadlineDate] = useState(null);
   const [artworks, setArtworks] = useState([]);
 
   const [titleError, setTitleError] = useState('');
@@ -108,6 +109,7 @@ export default function AddProjectScreen() {
         software: softwareString,
         status,
         created_date: createdDate,
+        deadline_date: deadlineDate || null,
         image_uri: artworks.length > 0 ? artworks[0].image_uri : null,
         artworks: artworks,
         is_favorite: 0,
@@ -368,6 +370,17 @@ export default function AddProjectScreen() {
           onChange={setCreatedDate}
           label="Creation Date"
           maxDate={new Date()}
+        />
+      </View>
+
+      {/* Deadline Date Picker (Optional) */}
+      <View style={styles.section}>
+        <DatePickerField
+          value={deadlineDate}
+          onChange={setDeadlineDate}
+          label="Project Deadline (Optional)"
+          placeholder="No deadline set (optional)"
+          allowClear={true}
         />
       </View>
 

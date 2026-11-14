@@ -40,11 +40,39 @@ export const DARK_COLORS = {
   white: '#FFFFFF',
 };
 
+export const MIDNIGHT_COLORS = {
+  primary: '#9F6BFF',       // Primary accent (vibrant purple)
+  primaryDark: '#854BF6',
+  primaryLight: '#B88DFF',
+  secondary: '#36235C',     // Dark purple tint for badges and chips
+  secondaryDark: '#2C1B4D',
+  secondaryAccent: '#C4A1FF',// Secondary accent
+  background: '#100C24',    // Deep midnight purple canvas
+  surface: '#24183F',       // Elevated midnight cards and surfaces
+  surfaceSubtle: '#332357', // Inputs, hover chips, elevated borders
+  text: '#F5F0FF',          // Main crisp text
+  textSecondary: '#B7A8D4',  // Secondary lavender text
+  textMuted: '#8E7EB0',     // Subtle muted metadata
+  border: '#3F2C6B',        // Muted purple container borders
+  borderLight: '#2C1E4F',
+  success: '#34D399',       // Clean contrast green
+  warning: '#FBBF24',       // Amber
+  danger: '#F87171',        // Soft red
+  accent: '#C4A1FF',        // Secondary accent
+  white: '#FFFFFF',
+};
+
 // Default export maintains full backwards compatibility
 export const COLORS = LIGHT_COLORS;
 
-export function getThemeColors(isDark) {
-  return isDark ? DARK_COLORS : LIGHT_COLORS;
+export function getThemeColors(themeOrIsDark) {
+  if (themeOrIsDark === 'midnight') {
+    return MIDNIGHT_COLORS;
+  }
+  if (themeOrIsDark === 'dark' || themeOrIsDark === true) {
+    return DARK_COLORS;
+  }
+  return LIGHT_COLORS;
 }
 
 export const SPACING = {

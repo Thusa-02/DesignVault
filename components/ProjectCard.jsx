@@ -6,6 +6,7 @@ import { RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import StatusBadge from './StatusBadge';
 import ProjectImage from './ProjectImage';
 import { formatReadableDate } from './DatePickerField';
+import DeadlineBadge from './DeadlineBadge';
 
 export default function ProjectCard({
   project,
@@ -76,6 +77,17 @@ export default function ProjectCard({
         <Text style={styles.title} numberOfLines={2}>
           {project.title}
         </Text>
+
+        {!!project.deadline_date && (
+          <View style={styles.cardDeadlineRow}>
+            <DeadlineBadge
+              deadlineDate={project.deadline_date}
+              status={project.status}
+              compact={true}
+              showDays={true}
+            />
+          </View>
+        )}
 
         {!compact && project.software && (
           <View style={styles.softwareRow}>
@@ -178,6 +190,9 @@ const getStyles = (COLORS, isDark) => StyleSheet.create({
     color: COLORS.text,
     lineHeight: 22,
     marginBottom: 6,
+  },
+  cardDeadlineRow: {
+    marginBottom: 8,
   },
   softwareRow: {
     flexDirection: 'row',

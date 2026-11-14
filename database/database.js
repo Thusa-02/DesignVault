@@ -34,6 +34,7 @@ export async function initializeDatabase() {
       software TEXT,
       status TEXT,
       created_date TEXT,
+      deadline_date TEXT,
       image_uri TEXT,
       is_favorite INTEGER DEFAULT 0,
       created_at TEXT,
@@ -97,6 +98,17 @@ export async function initializeDatabase() {
       created_at TEXT NOT NULL
     );
   `);
+
+  // Safe migration: Add deadline_date column to projects table if missing
+  try {
+    const tableInfo = await db.getAllAsync('PRAGMA table_info(projects);');
+    const hasDeadlineCol = tableInfo.some((col) => col.name === 'deadline_date');
+    if (!hasDeadlineCol) {
+      await db.execAsync('ALTER TABLE projects ADD COLUMN deadline_date TEXT;');
+    }
+  } catch (err) {
+    console.warn('[DesignVault] Note on deadline_date migration:', err?.message || err);
+  }
 
   // Migrate any existing projects.image_uri records into project_artworks (idempotent, safe)
   await db.execAsync(`
@@ -241,8 +253,8 @@ export async function seedInitialProjects() {
       await db.runAsync(
         `INSERT INTO projects (
           title, description, category, software, status,
-          created_date, image_uri, is_favorite, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          created_date, deadline_date, image_uri, is_favorite, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           p.title,
           p.description,
@@ -250,6 +262,7 @@ export async function seedInitialProjects() {
           p.software,
           p.status,
           p.created_date,
+          p.deadline_date || null,
           p.image_uri,
           p.is_favorite,
           now,

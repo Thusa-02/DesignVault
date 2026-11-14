@@ -137,6 +137,7 @@ export async function addProject({
   software = '',
   status = 'In Progress',
   created_date = new Date().toISOString().split('T')[0],
+  deadline_date = null,
   image_uri = null,
   artworks = [],
   is_favorite = 0,
@@ -149,11 +150,15 @@ export async function addProject({
     ? (typeof artworks[0] === 'string' ? artworks[0] : artworks[0].image_uri)
     : image_uri;
 
+  const cleanDeadline = deadline_date && typeof deadline_date === 'string' && deadline_date.trim() !== ''
+    ? deadline_date.trim()
+    : null;
+
   const result = await db.runAsync(
     `INSERT INTO projects (
       title, description, category, software, status,
-      created_date, image_uri, is_favorite, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      created_date, deadline_date, image_uri, is_favorite, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       title.trim(),
       description ? description.trim() : '',
@@ -161,6 +166,7 @@ export async function addProject({
       software ? software.trim() : '',
       status,
       created_date,
+      cleanDeadline,
       primaryCover,
       is_favorite ? 1 : 0,
       now,
@@ -193,6 +199,7 @@ export async function updateProject(id, {
   software = '',
   status = 'In Progress',
   created_date,
+  deadline_date,
   image_uri,
   artworks,
   is_favorite,
@@ -214,6 +221,9 @@ export async function updateProject(id, {
 
   const updatedFav = is_favorite !== undefined ? (is_favorite ? 1 : 0) : current.is_favorite;
   const updatedDate = created_date !== undefined ? created_date : current.created_date;
+  const updatedDeadline = deadline_date !== undefined
+    ? (deadline_date && typeof deadline_date === 'string' && deadline_date.trim() !== '' ? deadline_date.trim() : null)
+    : current.deadline_date;
 
   await db.runAsync(
     `UPDATE projects SET
@@ -223,6 +233,7 @@ export async function updateProject(id, {
       software = ?,
       status = ?,
       created_date = ?,
+      deadline_date = ?,
       image_uri = ?,
       is_favorite = ?,
       updated_at = ?
@@ -234,6 +245,7 @@ export async function updateProject(id, {
       software ? software.trim() : '',
       status,
       updatedDate,
+      updatedDeadline,
       updatedImage,
       updatedFav,
       now,
@@ -481,12 +493,18 @@ export async function setUserProfile({ name, profileImageUri }) {
 }
 
 export async function getThemePreference() {
-  return await getUserPreference('theme', 'system');
+  const current = await getUserPreference('theme', 'light');
+  // Safe migration: If existing preference was 'system' or invalid, migrate it to 'light'
+  if (current === 'system' || !['light', 'dark', 'midnight'].includes(current)) {
+    await setUserPreference('theme', 'light');
+    return 'light';
+  }
+  return current;
 }
 
 export async function setThemePreference(theme) {
-  const valid = ['system', 'light', 'dark'];
-  const value = valid.includes(theme) ? theme : 'system';
+  const valid = ['light', 'dark', 'midnight'];
+  const value = valid.includes(theme) ? theme : 'light';
   await setUserPreference('theme', value);
   return value;
 }
