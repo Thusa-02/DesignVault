@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -13,19 +13,25 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProjects } from '../../hooks/useProjects';
+import { useTheme } from '../../hooks/useTheme';
 import { pickAndSaveArtworks, deleteLocalImage } from '../../services/imageStorage';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../../constants/theme';
+import { RADIUS, SHADOWS, SPACING } from '../../constants/theme';
 import { CATEGORIES, STATUS_OPTIONS, SOFTWARE_OPTIONS } from '../../constants/categories';
 import DatePickerField, { formatDateToISO } from '../../components/DatePickerField';
 
 export default function AddProjectScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { addProject } = useProjects();
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
+
+  const { addProject, categories } = useProjects();
+
+  const displayCategories = categories && categories.length > 0 ? categories : CATEGORIES;
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState(params?.prefillCategory || CATEGORIES[0].name);
+  const [category, setCategory] = useState(params?.prefillCategory || displayCategories[0]?.name || 'Social Media');
   const [selectedSoftware, setSelectedSoftware] = useState(['Adobe Photoshop']);
   const [customSoftware, setCustomSoftware] = useState('');
   const [status, setStatus] = useState('In Progress');
@@ -236,29 +242,31 @@ export default function AddProjectScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipRow}
         >
-          {CATEGORIES.map((cat) => {
+          {displayCategories.map((cat) => {
             const isSelected = category === cat.name;
+            const catColor = cat.color || COLORS.primary;
+            const catBg = cat.bgColor || cat.bg_color || '#EDE9FE';
             return (
               <TouchableOpacity
-                key={cat.id}
+                key={cat.id || cat.name}
                 style={[
                   styles.choiceChip,
                   isSelected && {
-                    backgroundColor: cat.bgColor,
-                    borderColor: cat.color,
+                    backgroundColor: catBg,
+                    borderColor: catColor,
                   },
                 ]}
                 onPress={() => setCategory(cat.name)}
               >
                 <MaterialCommunityIcons
-                  name={cat.icon}
+                  name={cat.icon || 'palette'}
                   size={16}
-                  color={isSelected ? cat.color : COLORS.textMuted}
+                  color={isSelected ? catColor : COLORS.textMuted}
                 />
                 <Text
                   style={[
                     styles.choiceChipText,
-                    isSelected && { color: cat.color, fontWeight: '700' },
+                    isSelected && { color: catColor, fontWeight: '700' },
                   ]}
                 >
                   {cat.name}
@@ -398,7 +406,7 @@ export default function AddProjectScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -447,7 +455,7 @@ const styles = StyleSheet.create({
   addMoreSmallBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: RADIUS.full,
@@ -558,7 +566,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.xs,
@@ -706,7 +714,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   addToolButton: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',

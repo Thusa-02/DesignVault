@@ -1,4 +1,4 @@
-export const COLORS = {
+export const LIGHT_COLORS = {
   primary: '#7C3AED',       // Purple
   primaryDark: '#6D28D9',
   primaryLight: '#8B5CF6',
@@ -18,6 +18,34 @@ export const COLORS = {
   accent: '#EC4899',
   white: '#FFFFFF',
 };
+
+export const DARK_COLORS = {
+  primary: '#A78BFA',       // High-contrast readable violet in dark mode
+  primaryDark: '#8B5CF6',
+  primaryLight: '#C4B5FD',
+  secondary: '#2E1065',     // Deep lavender dark background
+  secondaryDark: '#3B0764',
+  background: '#0B0F19',    // Deep slate/navy
+  surface: '#1E293B',       // Elevated dark card surface
+  surfaceSubtle: '#334155',
+  text: '#F8FAFC',          // Crisp light primary text
+  textSecondary: '#94A3B8',  // Muted readable text
+  textMuted: '#64748B',
+  border: '#334155',
+  borderLight: '#1E293B',
+  success: '#34D399',
+  warning: '#FBBF24',
+  danger: '#F87171',
+  accent: '#F472B6',
+  white: '#FFFFFF',
+};
+
+// Default export maintains full backwards compatibility
+export const COLORS = LIGHT_COLORS;
+
+export function getThemeColors(isDark) {
+  return isDark ? DARK_COLORS : LIGHT_COLORS;
+}
 
 export const SPACING = {
   xs: 4,
@@ -52,3 +80,6 @@ export const SHADOWS = {
     elevation: 4,
   },
 };
+
+export default COLORS;
+

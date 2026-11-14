@@ -2,26 +2,28 @@ import React, { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as NavigationBar from 'expo-navigation-bar';
 import { ProjectProvider, useProjects } from '../context/ProjectContext';
 import { COLORS, RADIUS, SHADOWS } from '../constants/theme';
 
 function AppLoader() {
+  const { isDark, themeColors } = useProjects();
   return (
-    <View style={styles.loadingContainer}>
-      <View style={styles.logoCircle}>
-        <MaterialCommunityIcons name="palette-swatch" size={48} color={COLORS.primary} />
+    <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
+      <View style={[styles.logoCircle, { backgroundColor: isDark ? themeColors.surfaceSubtle : themeColors.secondary }]}>
+        <MaterialCommunityIcons name="palette-swatch" size={48} color={themeColors.primary} />
       </View>
-      <Text style={styles.brandTitle}>DesignVault</Text>
-      <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
-      <Text style={styles.loadingText}>Opening portfolio...</Text>
+      <Text style={[styles.brandTitle, { color: themeColors.text }]}>DesignVault</Text>
+      <ActivityIndicator size="large" color={themeColors.primary} style={{ marginTop: 20 }} />
+      <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>Opening portfolio...</Text>
     </View>
   );
 }
 
 function RootNavigation() {
-  const { userName, userNameLoading } = useProjects();
+  const { userName, userNameLoading, isDark, themeColors } = useProjects();
   const router = useRouter();
   const segments = useSegments();
 
@@ -37,57 +39,90 @@ function RootNavigation() {
     }
   }, [userName, userNameLoading, segments]);
 
+  // Synchronize Android system navigation bar with current theme
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      try {
+        NavigationBar.setBackgroundColorAsync(themeColors.surface).catch(() => {});
+        NavigationBar.setButtonStyleAsync(isDark ? 'light' : 'dark').catch(() => {});
+        NavigationBar.setBorderColorAsync(themeColors.border).catch(() => {});
+      } catch (err) {
+        // Graceful fallback on devices/emulators that do not support runtime styling
+      }
+    }
+  }, [isDark, themeColors.surface, themeColors.border]);
+
   if (userNameLoading) {
     return <AppLoader />;
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: COLORS.surface },
-        headerTintColor: COLORS.text,
-        headerTitleStyle: { fontWeight: '700', fontSize: 18 },
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: COLORS.background },
-      }}
-    >
-      <Stack.Screen
-        name="(tabs)"
-        options={{ headerShown: false }}
+    <View style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <StatusBar
+        style={isDark ? 'light' : 'dark'}
+        backgroundColor={themeColors.background}
       />
-      <Stack.Screen
-        name="onboarding"
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="settings"
-        options={{
-          title: 'Profile & Settings',
-          headerBackTitle: 'Back',
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: themeColors.surface },
+          headerTintColor: themeColors.text,
+          headerTitleStyle: { fontWeight: '700', fontSize: 18 },
+          headerShadowVisible: false,
+          contentStyle: { backgroundColor: themeColors.background },
         }}
-      />
-      <Stack.Screen
-        name="project/[id]"
-        options={{
-          title: 'Project Details',
-          headerBackTitle: 'Back',
-        }}
-      />
-      <Stack.Screen
-        name="project/add"
-        options={{
-          title: 'Add New Project',
-          headerBackTitle: 'Back',
-        }}
-      />
-      <Stack.Screen
-        name="project/edit/[id]"
-        options={{
-          title: 'Edit Project',
-          headerBackTitle: 'Cancel',
-        }}
-      />
-    </Stack>
+      >
+        <Stack.Screen
+          name="(tabs)"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="onboarding"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="profile"
+          options={{
+            title: 'My Profile',
+            headerBackTitle: 'Back',
+          }}
+        />
+        <Stack.Screen
+          name="settings"
+          options={{
+            title: 'Settings',
+            headerBackTitle: 'Back',
+          }}
+        />
+        <Stack.Screen
+          name="manage-categories"
+          options={{
+            title: 'Manage Categories',
+            headerBackTitle: 'Back',
+          }}
+        />
+        <Stack.Screen
+          name="project/[id]"
+          options={{
+            title: 'Project Details',
+            headerBackTitle: 'Back',
+          }}
+        />
+        <Stack.Screen
+          name="project/add"
+          options={{
+            title: 'Add New Project',
+            headerBackTitle: 'Back',
+          }}
+        />
+        <Stack.Screen
+          name="project/edit/[id]"
+          options={{
+            title: 'Edit Project',
+            headerBackTitle: 'Cancel',
+          }}
+        />
+      </Stack>
+    </View>
   );
 }
 
@@ -95,7 +130,6 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ProjectProvider>
-        <StatusBar style="dark" backgroundColor={COLORS.background} />
         <RootNavigation />
       </ProjectProvider>
     </SafeAreaProvider>

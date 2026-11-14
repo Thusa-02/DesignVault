@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -15,11 +15,15 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProjects } from '../hooks/useProjects';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { RADIUS, SHADOWS, SPACING } from '../constants/theme';
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
+
   const { updateUserName } = useProjects();
 
   const [name, setName] = useState('');
@@ -148,7 +152,7 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   keyboardContainer: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -167,7 +171,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.md,
@@ -191,6 +195,8 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
     width: '100%',
     maxWidth: 420,
+    borderWidth: 1,
+    borderColor: isDark ? COLORS.border : 'transparent',
     ...SHADOWS.card,
     marginBottom: SPACING.lg,
   },
@@ -227,7 +233,7 @@ const styles = StyleSheet.create({
   },
   inputWrapperError: {
     borderColor: COLORS.danger,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: isDark ? '#7F1D1D30' : '#FEF2F2',
   },
   inputIcon: {
     marginRight: SPACING.sm,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,7 +8,8 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, RADIUS, SPACING, SHADOWS } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { RADIUS, SPACING, SHADOWS } from '../constants/theme';
 
 /**
  * Converts a Date object to local YYYY-MM-DD string without timezone offset shifts.
@@ -67,6 +68,8 @@ export default function DatePickerField({
   maxDate = new Date(),
   style,
 }) {
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
   const [showPicker, setShowPicker] = useState(false);
 
   // Convert current ISO string value to Date object for picker
@@ -129,14 +132,14 @@ export default function DatePickerField({
           maximumDate={maxDate}
           onChange={handleDateChange}
           accentColor={COLORS.primary}
-          themeVariant="light"
+          themeVariant={isDark ? 'dark' : 'light'}
         />
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   container: {
     marginBottom: SPACING.md,
   },
@@ -161,7 +164,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: RADIUS.md,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: SPACING.md,
@@ -178,7 +181,7 @@ const styles = StyleSheet.create({
   actionChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: RADIUS.full,

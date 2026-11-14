@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, RADIUS, SPACING } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { RADIUS, SPACING } from '../constants/theme';
 
 export default function EmptyState({
   icon = 'folder-open-outline',
@@ -11,6 +12,9 @@ export default function EmptyState({
   onAction,
   style,
 }) {
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
+
   return (
     <View style={[styles.container, style]}>
       <View style={styles.iconCircle}>
@@ -32,7 +36,7 @@ export default function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   container: {
     padding: SPACING.xl,
     alignItems: 'center',
@@ -42,7 +46,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.md,

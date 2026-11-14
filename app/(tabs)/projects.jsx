@@ -7,27 +7,62 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useProjects } from '../../hooks/useProjects';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../../constants/theme';
+import { useProjects } from '../../context/ProjectContext';
+import { useTheme } from '../../hooks/useTheme';
+import { RADIUS, SHADOWS, SPACING } from '../../constants/theme';
 import { CATEGORIES, STATUS_OPTIONS } from '../../constants/categories';
 import SearchBar from '../../components/SearchBar';
 import ProjectCard from '../../components/ProjectCard';
 import EmptyState from '../../components/EmptyState';
 
+const SORT_LABELS = {
+  newest: 'Newest First',
+  oldest: 'Oldest First',
+  name_asc: 'Name A–Z',
+  name_desc: 'Name Z–A',
+  updated: 'Recently Updated',
+};
+
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest First', icon: 'sort-calendar-descending' },
+  { value: 'oldest', label: 'Oldest First', icon: 'sort-calendar-ascending' },
+  { value: 'name_asc', label: 'Name A–Z', icon: 'sort-alphabetical-ascending' },
+  { value: 'name_desc', label: 'Name Z–A', icon: 'sort-alphabetical-descending' },
+  { value: 'updated', label: 'Recently Updated', icon: 'clock-outline' },
+];
+
 export default function ProjectsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
-  const { projects, refreshData, toggleFavorite } = useProjects();
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
+
+  const {
+    projects,
+    categories,
+    defaultSort,
+    refreshData,
+    toggleFavorite,
+  } = useProjects();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
+  const [activeSort, setActiveSort] = useState(defaultSort || 'newest');
+  const [sortModalVisible, setSortModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (defaultSort) {
+      setActiveSort(defaultSort);
+    }
+  }, [defaultSort]);
 
   // If navigated here with a category param (from Home or Categories screen), apply it
   useEffect(() => {
@@ -42,9 +77,9 @@ export default function ProjectsScreen() {
     setRefreshing(false);
   };
 
-  // Filtered project list
+  // Filtered and sorted project list
   const filteredProjects = useMemo(() => {
-    return projects.filter((project) => {
+    const list = projects.filter((project) => {
       // Category match
       const matchesCategory =
         selectedCategory === 'All' ||
@@ -65,7 +100,26 @@ export default function ProjectsScreen() {
 
       return matchesCategory && matchesStatus && matchesSearch;
     });
-  }, [projects, selectedCategory, selectedStatus, searchQuery]);
+
+    return list.sort((a, b) => {
+      if (activeSort === 'newest') {
+        return (b.created_date || '').localeCompare(a.created_date || '') || b.id - a.id;
+      }
+      if (activeSort === 'oldest') {
+        return (a.created_date || '').localeCompare(b.created_date || '') || a.id - b.id;
+      }
+      if (activeSort === 'name_asc') {
+        return (a.title || '').localeCompare(b.title || '');
+      }
+      if (activeSort === 'name_desc') {
+        return (b.title || '').localeCompare(a.title || '');
+      }
+      if (activeSort === 'updated') {
+        return (b.updated_at || '').localeCompare(a.updated_at || '') || b.id - a.id;
+      }
+      return 0;
+    });
+  }, [projects, selectedCategory, selectedStatus, searchQuery, activeSort]);
 
   const activeFiltersCount =
     (selectedCategory !== 'All' ? 1 : 0) +
@@ -132,11 +186,11 @@ export default function ProjectsScreen() {
             </Text>
           </TouchableOpacity>
 
-          {CATEGORIES.map((cat) => {
+          {(categories && categories.length > 0 ? categories : CATEGORIES).map((cat) => {
             const isActive = selectedCategory === cat.name;
             return (
               <TouchableOpacity
-                key={cat.id}
+                key={cat.id || cat.name}
                 style={[
                   styles.filterChip,
                   isActive && styles.filterChipActive,
@@ -215,18 +269,31 @@ export default function ProjectsScreen() {
         </ScrollView>
       </View>
 
-      {/* Filter Reset Pill if active */}
-      {activeFiltersCount > 0 && (
-        <View style={styles.activeFiltersRow}>
-          <Text style={styles.activeFiltersCount}>
-            Active filters: {activeFiltersCount}
+      {/* Controls Bar: Sort Button & Active Filters Indicator */}
+      <View style={styles.controlsBar}>
+        <TouchableOpacity
+          style={styles.sortButton}
+          onPress={() => setSortModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="sort" size={16} color={COLORS.primary} />
+          <Text style={styles.sortButtonText}>
+            {SORT_LABELS[activeSort] || 'Sort'}
           </Text>
+          <MaterialCommunityIcons name="chevron-down" size={14} color={COLORS.primary} />
+        </TouchableOpacity>
+
+        {activeFiltersCount > 0 ? (
           <TouchableOpacity onPress={clearAllFilters} style={styles.resetButton}>
-            <MaterialCommunityIcons name="filter-remove" size={14} color={COLORS.primary} />
-            <Text style={styles.resetText}>Reset All</Text>
+            <MaterialCommunityIcons name="filter-remove" size={13} color={COLORS.danger} />
+            <Text style={styles.resetText}>Reset ({activeFiltersCount})</Text>
           </TouchableOpacity>
-        </View>
-      )}
+        ) : (
+          <Text style={styles.resultsCountText}>
+            {filteredProjects.length} {filteredProjects.length === 1 ? 'project' : 'projects'}
+          </Text>
+        )}
+      </View>
 
       {/* Projects List */}
       <FlatList
@@ -274,11 +341,75 @@ export default function ProjectsScreen() {
           />
         }
       />
+
+      {/* Sort Selector Modal */}
+      <Modal
+        visible={sortModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSortModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Sort Projects By</Text>
+              <TouchableOpacity
+                onPress={() => setSortModalVisible(false)}
+                style={styles.modalCloseBtn}
+              >
+                <MaterialCommunityIcons name="close" size={20} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ marginVertical: 8 }}>
+              {SORT_OPTIONS.map((opt) => {
+                const isSelected = activeSort === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                      styles.sortOptionRow,
+                      isSelected && styles.sortOptionRowSelected,
+                    ]}
+                    onPress={() => {
+                      setActiveSort(opt.value);
+                      setSortModalVisible(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialCommunityIcons
+                      name={opt.icon}
+                      size={20}
+                      color={isSelected ? COLORS.primary : COLORS.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.sortOptionLabel,
+                        isSelected && { color: COLORS.primary, fontWeight: '700' },
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                    {isSelected && (
+                      <MaterialCommunityIcons
+                        name="check"
+                        size={18}
+                        color={COLORS.primary}
+                        style={{ marginLeft: 'auto' }}
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -367,7 +498,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   statusChipActive: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     borderColor: COLORS.primary,
   },
   statusDot: {
@@ -384,13 +515,40 @@ const styles = StyleSheet.create({
     color: COLORS.primaryDark,
     fontWeight: '700',
   },
+  controlsBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    marginBottom: SPACING.xs,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+    gap: 4,
+  },
+  sortButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primaryDark,
+  },
+  resultsCountText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
   activeFiltersRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
     paddingVertical: 6,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     marginHorizontal: SPACING.md,
     borderRadius: RADIUS.sm,
     marginBottom: SPACING.xs,
@@ -403,12 +561,64 @@ const styles = StyleSheet.create({
   resetButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: isDark ? '#7F1D1D40' : '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
     gap: 4,
   },
   resetText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: COLORS.danger,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.md,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    ...SHADOWS.card,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  sortOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 6,
+    gap: 10,
+  },
+  sortOptionRowSelected: {
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
+    borderColor: COLORS.primary,
+  },
+  sortOptionLabel: {
+    fontSize: 14,
+    color: COLORS.text,
   },
   listContent: {
     paddingHorizontal: SPACING.md,

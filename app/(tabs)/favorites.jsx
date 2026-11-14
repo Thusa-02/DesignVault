@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,13 +9,17 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProjects } from '../../hooks/useProjects';
-import { COLORS, SPACING } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
+import { SPACING } from '../../constants/theme';
 import ProjectCard from '../../components/ProjectCard';
 import EmptyState from '../../components/EmptyState';
 
 export default function FavoritesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
+
   const { projects, refreshData, toggleFavorite } = useProjects();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -74,7 +78,7 @@ export default function FavoritesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

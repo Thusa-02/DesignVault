@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,7 +12,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProjects } from '../../hooks/useProjects';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
+import { RADIUS, SHADOWS, SPACING } from '../../constants/theme';
 import { CATEGORIES } from '../../constants/categories';
 import CategoryCard from '../../components/CategoryCard';
 import ProjectCard from '../../components/ProjectCard';
@@ -20,9 +21,14 @@ import ProjectCard from '../../components/ProjectCard';
 export default function CategoriesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { stats, projects, refreshData, toggleFavorite } = useProjects();
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
+
+  const { stats, projects, categories, refreshData, toggleFavorite } = useProjects();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  const displayCategories = categories && categories.length > 0 ? categories : CATEGORIES;
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -62,11 +68,20 @@ export default function CategoriesScreen() {
             </TouchableOpacity>
 
             <View style={styles.bannerInfo}>
-              <View style={[styles.bannerIcon, { backgroundColor: selectedCategory.bgColor }]}>
+              <View
+                style={[
+                  styles.bannerIcon,
+                  {
+                    backgroundColor: isDark
+                      ? `${selectedCategory.color || COLORS.primary}25`
+                      : (selectedCategory.bgColor || selectedCategory.bg_color || '#EDE9FE'),
+                  },
+                ]}
+              >
                 <MaterialCommunityIcons
-                  name={selectedCategory.icon}
+                  name={selectedCategory.icon || 'palette'}
                   size={32}
-                  color={selectedCategory.color}
+                  color={selectedCategory.color || COLORS.primary}
                 />
               </View>
               <View style={styles.bannerText}>
@@ -140,11 +155,11 @@ export default function CategoriesScreen() {
             />
           }
         >
-          {CATEGORIES.map((cat) => {
+          {displayCategories.map((cat) => {
             const count = stats.categoryCounts[cat.name] || 0;
             return (
               <CategoryCard
-                key={cat.id}
+                key={cat.id || cat.name}
                 category={cat}
                 count={count}
                 onPress={() => setSelectedCategory(cat)}
@@ -157,7 +172,7 @@ export default function CategoriesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -190,6 +205,8 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.md,
     borderRadius: RADIUS.lg,
     marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: isDark ? COLORS.border : 'transparent',
     ...SHADOWS.card,
   },
   backButton: {

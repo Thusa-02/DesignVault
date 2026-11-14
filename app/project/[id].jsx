@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,7 +12,8 @@ import {
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProjects } from '../../hooks/useProjects';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
+import { RADIUS, SHADOWS, SPACING } from '../../constants/theme';
 import { CATEGORIES } from '../../constants/categories';
 import ProjectImage from '../../components/ProjectImage';
 import StatusBadge from '../../components/StatusBadge';
@@ -25,7 +26,16 @@ import ProjectNotes from '../../components/ProjectNotes';
 export default function ProjectDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { deleteProject, toggleFavorite, getProjectById, projects } = useProjects();
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
+
+  const {
+    deleteProject,
+    toggleFavorite,
+    getProjectById,
+    projects,
+    galleryLayout,
+  } = useProjects();
 
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -195,7 +205,12 @@ export default function ProjectDetailsScreen() {
         <View style={styles.card}>
           {/* Header Row: Category Badge & Status */}
           <View style={styles.headerRow}>
-            <View style={[styles.categoryPill, { backgroundColor: categoryObj.bgColor }]}>
+            <View
+              style={[
+                styles.categoryPill,
+                { backgroundColor: isDark ? `${categoryObj.color}25` : categoryObj.bgColor },
+              ]}
+            >
               <MaterialCommunityIcons
                 name={categoryObj.icon}
                 size={16}
@@ -286,26 +301,52 @@ export default function ProjectDetailsScreen() {
               </View>
             </View>
 
-            <View style={styles.galleryGrid}>
-              {artworksList.map((art, idx) => (
-                <TouchableOpacity
-                  key={art.id || idx}
-                  style={styles.thumbCard}
-                  activeOpacity={0.8}
-                  onPress={() => openViewerAtIndex(idx)}
-                >
-                  <View style={styles.thumbImageWrap}>
-                    <Image source={{ uri: art.image_uri }} style={styles.thumbImage} />
-                    <View style={styles.thumbBadge}>
-                      <Text style={styles.thumbBadgeText}>#{idx + 1}</Text>
+            {galleryLayout === 'list' ? (
+              <View style={styles.galleryList}>
+                {artworksList.map((art, idx) => (
+                  <TouchableOpacity
+                    key={art.id || idx}
+                    style={styles.listArtworkCard}
+                    activeOpacity={0.85}
+                    onPress={() => openViewerAtIndex(idx)}
+                  >
+                    <View style={styles.listArtworkImageWrap}>
+                      <Image source={{ uri: art.image_uri }} style={styles.listArtworkImage} />
+                      <View style={styles.thumbBadge}>
+                        <Text style={styles.thumbBadgeText}>#{idx + 1}</Text>
+                      </View>
                     </View>
-                  </View>
-                  <Text style={styles.thumbTitle} numberOfLines={1}>
-                    {art.artwork_title || `Design #${idx + 1}`}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                    <View style={styles.listArtworkInfo}>
+                      <Text style={styles.listArtworkTitle} numberOfLines={1}>
+                        {art.artwork_title || `Design #${idx + 1}`}
+                      </Text>
+                      <Text style={styles.listArtworkHint}>Tap to view fullscreen</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.galleryGrid}>
+                {artworksList.map((art, idx) => (
+                  <TouchableOpacity
+                    key={art.id || idx}
+                    style={styles.thumbCard}
+                    activeOpacity={0.8}
+                    onPress={() => openViewerAtIndex(idx)}
+                  >
+                    <View style={styles.thumbImageWrap}>
+                      <Image source={{ uri: art.image_uri }} style={styles.thumbImage} />
+                      <View style={styles.thumbBadge}>
+                        <Text style={styles.thumbBadgeText}>#{idx + 1}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.thumbTitle} numberOfLines={1}>
+                      {art.artwork_title || `Design #${idx + 1}`}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -371,7 +412,7 @@ export default function ProjectDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -487,7 +528,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   favBadgeActive: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: isDark ? '#7F1D1D40' : '#FEE2E2',
   },
   favBadgeText: {
     fontSize: 12,
@@ -527,7 +568,7 @@ const styles = StyleSheet.create({
   softwareChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: RADIUS.md,
@@ -564,7 +605,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   artworkCountPill: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: RADIUS.full,
@@ -578,6 +619,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  galleryList: {
+    gap: 10,
+  },
+  listArtworkCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceSubtle,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    padding: 8,
+    gap: 12,
+  },
+  listArtworkImageWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: COLORS.borderLight,
+  },
+  listArtworkImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  listArtworkInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  listArtworkTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  listArtworkHint: {
+    fontSize: 12,
+    color: COLORS.textMuted,
   },
   thumbCard: {
     width: '31%',
@@ -645,9 +727,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEE2E2',
+    backgroundColor: isDark ? '#7F1D1D40' : '#FEE2E2',
     borderWidth: 1,
-    borderColor: '#FCA5A5',
+    borderColor: isDark ? '#B91C1C' : '#FCA5A5',
     paddingVertical: 14,
     borderRadius: RADIUS.lg,
     gap: 6,

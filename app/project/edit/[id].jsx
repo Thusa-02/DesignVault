@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -13,15 +13,21 @@ import {
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProjects } from '../../../hooks/useProjects';
+import { useTheme } from '../../../hooks/useTheme';
 import { pickAndSaveArtworks, deleteLocalImage } from '../../../services/imageStorage';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../../../constants/theme';
+import { RADIUS, SHADOWS, SPACING } from '../../../constants/theme';
 import { CATEGORIES, STATUS_OPTIONS, SOFTWARE_OPTIONS } from '../../../constants/categories';
 import DatePickerField from '../../../components/DatePickerField';
 
 export default function EditProjectScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { projects, updateProject, getProjectById } = useProjects();
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
+
+  const { projects, updateProject, getProjectById, categories } = useProjects();
+
+  const displayCategories = categories && categories.length > 0 ? categories : CATEGORIES;
 
   const [loading, setLoading] = useState(true);
   const [originalProject, setOriginalProject] = useState(null);
@@ -277,29 +283,31 @@ export default function EditProjectScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chipRow}
           >
-            {CATEGORIES.map((cat) => {
+            {displayCategories.map((cat) => {
               const isSelected = category === cat.name;
+              const catColor = cat.color || COLORS.primary;
+              const catBg = cat.bgColor || cat.bg_color || '#EDE9FE';
               return (
                 <TouchableOpacity
-                  key={cat.id}
+                  key={cat.id || cat.name}
                   style={[
                     styles.choiceChip,
                     isSelected && {
-                      backgroundColor: cat.bgColor,
-                      borderColor: cat.color,
+                      backgroundColor: catBg,
+                      borderColor: catColor,
                     },
                   ]}
                   onPress={() => setCategory(cat.name)}
                 >
                   <MaterialCommunityIcons
-                    name={cat.icon}
+                    name={cat.icon || 'palette'}
                     size={16}
-                    color={isSelected ? cat.color : COLORS.textMuted}
+                    color={isSelected ? catColor : COLORS.textMuted}
                   />
                   <Text
                     style={[
                       styles.choiceChipText,
-                      isSelected && { color: cat.color, fontWeight: '700' },
+                      isSelected && { color: catColor, fontWeight: '700' },
                     ]}
                   >
                     {cat.name}
@@ -440,7 +448,7 @@ export default function EditProjectScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -505,7 +513,7 @@ const styles = StyleSheet.create({
   addMoreSmallBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: RADIUS.full,
@@ -724,7 +732,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   addToolButton: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',

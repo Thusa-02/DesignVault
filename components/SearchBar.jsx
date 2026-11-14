@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, RADIUS, SPACING } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { RADIUS, SPACING } from '../constants/theme';
 
 export default function SearchBar({
   value,
@@ -10,6 +11,8 @@ export default function SearchBar({
   placeholder = 'Search designs by title, software...',
   style,
 }) {
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
   const [isFocused, setIsFocused] = useState(false);
 
   return (
@@ -54,7 +57,7 @@ export default function SearchBar({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

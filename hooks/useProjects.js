@@ -1,4 +1,4 @@
-import { useProjects } from '../context/ProjectContext';
+import { useProjects, useTheme } from '../context/ProjectContext';
 
 export default useProjects;
-export { useProjects };
+export { useProjects, useTheme };

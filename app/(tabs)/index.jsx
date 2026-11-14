@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,12 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useProjects } from '../../hooks/useProjects';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../../constants/theme';
+import { useProjects } from '../../context/ProjectContext';
+import { useTheme } from '../../hooks/useTheme';
+import { RADIUS, SHADOWS, SPACING } from '../../constants/theme';
 import { CATEGORIES } from '../../constants/categories';
 import StatCard from '../../components/StatCard';
 import ProjectCard from '../../components/ProjectCard';
@@ -21,7 +23,18 @@ import { getPersonalizedGreeting } from '../../utils/greeting';
 export default function HomeDashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { stats, userName, loading, refreshData, toggleFavorite } = useProjects();
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
+
+  const {
+    stats,
+    userName,
+    profileImageUri,
+    categories,
+    loading,
+    refreshData,
+    toggleFavorite,
+  } = useProjects();
   const [refreshing, setRefreshing] = useState(false);
 
   const greeting = getPersonalizedGreeting(userName);
@@ -63,13 +76,26 @@ export default function HomeDashboardScreen() {
 
         <View style={styles.headerRight}>
           <TouchableOpacity
+            style={styles.settingsIconButton}
+            activeOpacity={0.75}
+            onPress={() => router.push('/settings')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <MaterialCommunityIcons name="cog-outline" size={24} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.profileButton}
             activeOpacity={0.8}
-            onPress={() => router.push('/settings')}
+            onPress={() => router.push('/profile')}
           >
-            <Text style={styles.profileAvatarText}>
-              {(userName || 'D').charAt(0).toUpperCase()}
-            </Text>
+            {profileImageUri ? (
+              <Image source={{ uri: profileImageUri }} style={styles.profileAvatarImg} />
+            ) : (
+              <Text style={styles.profileAvatarText}>
+                {(userName || 'D').charAt(0).toUpperCase()}
+              </Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -77,7 +103,7 @@ export default function HomeDashboardScreen() {
             activeOpacity={0.85}
             onPress={() => router.push('/project/add')}
           >
-            <MaterialCommunityIcons name="plus" size={20} color={COLORS.white} />
+            <MaterialCommunityIcons name="plus" size={18} color={COLORS.white} />
             <Text style={styles.quickAddText}>Add</Text>
           </TouchableOpacity>
         </View>
@@ -158,11 +184,13 @@ export default function HomeDashboardScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.categoryScroll}
       >
-        {CATEGORIES.map((cat) => {
+        {(categories && categories.length > 0 ? categories : CATEGORIES).map((cat) => {
           const count = stats.categoryCounts[cat.name] || 0;
+          const catBg = cat.bgColor || cat.bg_color || '#EDE9FE';
+          const catColor = cat.color || COLORS.primary;
           return (
             <TouchableOpacity
-              key={cat.id}
+              key={cat.id || cat.name}
               style={styles.categoryChip}
               activeOpacity={0.8}
               onPress={() => {
@@ -172,8 +200,8 @@ export default function HomeDashboardScreen() {
                 });
               }}
             >
-              <View style={[styles.categoryChipIcon, { backgroundColor: cat.bgColor }]}>
-                <MaterialCommunityIcons name={cat.icon} size={20} color={cat.color} />
+              <View style={[styles.categoryChipIcon, { backgroundColor: catBg }]}>
+                <MaterialCommunityIcons name={cat.icon || 'palette'} size={20} color={catColor} />
               </View>
               <View>
                 <Text style={styles.categoryChipName} numberOfLines={1}>
@@ -228,7 +256,7 @@ export default function HomeDashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -251,7 +279,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: RADIUS.md,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -269,17 +297,31 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: SPACING.xs + 2,
+  },
+  settingsIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceSubtle,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   profileButton: {
     width: 36,
     height: 36,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: isDark ? COLORS.surfaceSubtle : COLORS.secondary,
     borderWidth: 1.5,
     borderColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  profileAvatarImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: RADIUS.full,
   },
   profileAvatarText: {
     fontSize: 15,
@@ -325,7 +367,7 @@ const styles = StyleSheet.create({
   },
   welcomeSubtitle: {
     fontSize: 13,
-    color: COLORS.secondary,
+    color: isDark ? '#E2E8F0' : COLORS.secondary,
     lineHeight: 18,
   },
   bannerDecorIcon: {
@@ -372,6 +414,8 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     marginRight: SPACING.sm,
     gap: SPACING.sm,
+    borderWidth: 1,
+    borderColor: isDark ? COLORS.border : 'transparent',
     ...SHADOWS.card,
   },
   categoryChipIcon: {

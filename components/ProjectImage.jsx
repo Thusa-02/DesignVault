@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { StyleSheet, View, Image, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, RADIUS } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { RADIUS } from '../constants/theme';
 import { CATEGORIES } from '../constants/categories';
 
 export default function ProjectImage({ uri, category, style, iconSize = 36 }) {
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
   const [imageError, setImageError] = useState(false);
 
   // Reset error state whenever uri changes
@@ -34,9 +37,11 @@ export default function ProjectImage({ uri, category, style, iconSize = 36 }) {
     );
   }
 
+  const placeholderBg = isDark ? `${catObj.color}25` : catObj.bgColor;
+
   // Graceful artistic placeholder
   return (
-    <View style={[styles.placeholder, { backgroundColor: catObj.bgColor }, style]}>
+    <View style={[styles.placeholder, { backgroundColor: placeholderBg }, style]}>
       <View style={[styles.iconWrapper, { backgroundColor: COLORS.surface }]}>
         <MaterialCommunityIcons name={catObj.icon} size={iconSize} color={catObj.color} />
       </View>
@@ -47,7 +52,7 @@ export default function ProjectImage({ uri, category, style, iconSize = 36 }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',

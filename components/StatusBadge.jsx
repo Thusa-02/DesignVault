@@ -1,9 +1,12 @@
 import React from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { STATUS_OPTIONS } from '../constants/categories';
-import { COLORS, RADIUS } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { RADIUS } from '../constants/theme';
 
 export default function StatusBadge({ status, style }) {
+  const { colors: COLORS, isDark } = useTheme();
+
   const currentStatus = STATUS_OPTIONS.find(
     (s) => s.value.toLowerCase() === (status || '').toLowerCase()
   ) || {
@@ -12,8 +15,10 @@ export default function StatusBadge({ status, style }) {
     bgColor: COLORS.secondary,
   };
 
+  const bg = isDark ? `${currentStatus.color}25` : currentStatus.bgColor;
+
   return (
-    <View style={[styles.badge, { backgroundColor: currentStatus.bgColor }, style]}>
+    <View style={[styles.badge, { backgroundColor: bg }, style]}>
       <View style={[styles.dot, { backgroundColor: currentStatus.color }]} />
       <Text style={[styles.text, { color: currentStatus.color }]}>
         {currentStatus.label}

@@ -423,31 +423,94 @@ export async function getProjectStatistics() {
 /**
  * User Preferences Helpers
  */
-export async function getUserPreference(key) {
+export async function getUserPreference(key, defaultValue = null) {
   const db = await getDatabase();
   const row = await db.getFirstAsync(
     'SELECT value FROM user_preferences WHERE key = ?',
     [key]
   );
-  return row ? row.value : null;
+  return row && row.value !== null && row.value !== undefined ? row.value : defaultValue;
 }
 
 export async function setUserPreference(key, value) {
   const db = await getDatabase();
   await db.runAsync(
     'INSERT OR REPLACE INTO user_preferences (key, value) VALUES (?, ?)',
-    [key, String(value)]
+    [key, value !== null && value !== undefined ? String(value) : '']
   );
 }
 
 export async function getUserName() {
-  return await getUserPreference('user_name');
+  return await getUserPreference('user_name', '');
 }
 
 export async function setUserName(name) {
   const trimmed = name ? name.trim() : '';
   await setUserPreference('user_name', trimmed);
   return trimmed;
+}
+
+export async function getProfileImageUri() {
+  return await getUserPreference('profile_image_uri', null);
+}
+
+export async function setProfileImageUri(uri) {
+  await setUserPreference('profile_image_uri', uri || '');
+  return uri || null;
+}
+
+export async function getUserProfile() {
+  const [name, imageUri] = await Promise.all([
+    getUserName(),
+    getProfileImageUri(),
+  ]);
+  return {
+    name: name || '',
+    profileImageUri: imageUri || null,
+  };
+}
+
+export async function setUserProfile({ name, profileImageUri }) {
+  if (name !== undefined) {
+    await setUserName(name);
+  }
+  if (profileImageUri !== undefined) {
+    await setProfileImageUri(profileImageUri);
+  }
+  return await getUserProfile();
+}
+
+export async function getThemePreference() {
+  return await getUserPreference('theme', 'system');
+}
+
+export async function setThemePreference(theme) {
+  const valid = ['system', 'light', 'dark'];
+  const value = valid.includes(theme) ? theme : 'system';
+  await setUserPreference('theme', value);
+  return value;
+}
+
+export async function getDefaultSortPreference() {
+  return await getUserPreference('default_sort', 'newest');
+}
+
+export async function setDefaultSortPreference(sort) {
+  const valid = ['newest', 'oldest', 'name_asc', 'name_desc', 'updated'];
+  const value = valid.includes(sort) ? sort : 'newest';
+  await setUserPreference('default_sort', value);
+  return value;
+}
+
+export async function getGalleryLayoutPreference() {
+  return await getUserPreference('gallery_layout', 'grid');
+}
+
+export async function setGalleryLayoutPreference(layout) {
+  const valid = ['grid', 'list'];
+  const value = valid.includes(layout) ? layout : 'grid';
+  await setUserPreference('gallery_layout', value);
+  return value;
 }
 
 /* =======================================================================
@@ -707,4 +770,211 @@ export async function deleteNote(id, projectId) {
   const db = await getDatabase();
   await db.runAsync('DELETE FROM project_notes WHERE id = ?', [id]);
   return await getNotesByProjectId(projectId);
+}
+
+/* =======================================================================
+ * CATEGORIES MANAGEMENT REPOSITORY
+ * ======================================================================= */
+
+/**
+ * Retrieves all categories with live project counts.
+ */
+export async function getAllCategories() {
+  const db = await getDatabase();
+  return await db.getAllAsync(`
+    SELECT 
+      c.*,
+      (SELECT COUNT(*) FROM projects p WHERE LOWER(TRIM(p.category)) = LOWER(TRIM(c.name))) as project_count
+    FROM categories c
+    ORDER BY c.is_custom ASC, c.name ASC
+  `);
+}
+
+/**
+ * Adds a new custom category.
+ * Rejects duplicate names case-insensitively.
+ */
+export async function addCategory({
+  name,
+  icon = 'folder-outline',
+  color = '#7C3AED',
+  bgColor = '#EDE9FE',
+  description = '',
+}) {
+  const cleanName = (name || '').trim();
+  if (!cleanName) {
+    throw new Error('Category name cannot be empty');
+  }
+
+  const db = await getDatabase();
+
+  // Case-insensitive check
+  const existing = await db.getFirstAsync(
+    'SELECT id, name FROM categories WHERE LOWER(TRIM(name)) = LOWER(?)',
+    [cleanName]
+  );
+  if (existing) {
+    throw new Error(`Category "${existing.name}" already exists`);
+  }
+
+  const id = `custom-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const now = new Date().toISOString();
+
+  await db.runAsync(
+    `INSERT INTO categories (id, name, icon, color, bg_color, description, is_custom, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
+    [id, cleanName, icon, color, bgColor, description.trim(), now]
+  );
+
+  return await getAllCategories();
+}
+
+/**
+ * Renames a category and updates associated projects atomically.
+ */
+export async function renameCategory(id, newName) {
+  const cleanName = (newName || '').trim();
+  if (!cleanName) {
+    throw new Error('Category name cannot be empty');
+  }
+
+  const db = await getDatabase();
+
+  // Check collision with other categories
+  const collision = await db.getFirstAsync(
+    'SELECT id, name FROM categories WHERE LOWER(TRIM(name)) = LOWER(?) AND id != ?',
+    [cleanName, id]
+  );
+  if (collision) {
+    throw new Error(`Category "${collision.name}" already exists`);
+  }
+
+  const current = await db.getFirstAsync('SELECT name FROM categories WHERE id = ?', [id]);
+  if (!current) {
+    throw new Error('Category not found');
+  }
+  const oldName = current.name;
+
+  // Update category row
+  await db.runAsync('UPDATE categories SET name = ? WHERE id = ?', [cleanName, id]);
+
+  // Update projects referencing old category name
+  const now = new Date().toISOString();
+  await db.runAsync(
+    'UPDATE projects SET category = ?, updated_at = ? WHERE LOWER(TRIM(category)) = LOWER(TRIM(?))',
+    [cleanName, now, oldName]
+  );
+
+  return await getAllCategories();
+}
+
+/**
+ * Deletes a custom category.
+ * Prevents deletion if projects still belong to this category.
+ */
+export async function deleteCategory(id) {
+  const db = await getDatabase();
+  const current = await db.getFirstAsync('SELECT * FROM categories WHERE id = ?', [id]);
+  if (!current) return await getAllCategories();
+
+  // Check project count
+  const countRow = await db.getFirstAsync(
+    'SELECT COUNT(*) as count FROM projects WHERE LOWER(TRIM(category)) = LOWER(TRIM(?))',
+    [current.name]
+  );
+
+  const projectCount = countRow?.count || 0;
+  if (projectCount > 0) {
+    throw new Error(
+      `Cannot delete "${current.name}" because it contains ${projectCount} ${
+        projectCount === 1 ? 'project' : 'projects'
+      }. Please reassign those projects to another category first.`
+    );
+  }
+
+  await db.runAsync('DELETE FROM categories WHERE id = ?', [id]);
+  return await getAllCategories();
+}
+
+/**
+ * Reassigns all projects from one category to another.
+ */
+export async function reassignCategoryProjects(oldCategoryName, newCategoryName) {
+  if (!oldCategoryName || !newCategoryName) {
+    throw new Error('Both source and target categories are required for reassignment');
+  }
+  const db = await getDatabase();
+  const now = new Date().toISOString();
+
+  const result = await db.runAsync(
+    'UPDATE projects SET category = ?, updated_at = ? WHERE LOWER(TRIM(category)) = LOWER(TRIM(?))',
+    [newCategoryName.trim(), now, oldCategoryName.trim()]
+  );
+
+  return result.changes;
+}
+
+/* =======================================================================
+ * DATA MANAGEMENT REPOSITORY
+ * ======================================================================= */
+
+/**
+ * Retrieves aggregate database summary metrics.
+ */
+export async function getDatabaseSummary() {
+  const db = await getDatabase();
+  const [projectsRow, artworksRow, notesRow, tasksRow, colorsRow] = await Promise.all([
+    db.getFirstAsync('SELECT COUNT(*) as count FROM projects'),
+    db.getFirstAsync('SELECT COUNT(*) as count FROM project_artworks'),
+    db.getFirstAsync('SELECT COUNT(*) as count FROM project_notes'),
+    db.getFirstAsync('SELECT COUNT(*) as count FROM project_tasks'),
+    db.getFirstAsync('SELECT COUNT(*) as count FROM project_colors'),
+  ]);
+
+  return {
+    totalProjects: projectsRow?.count || 0,
+    totalArtworks: artworksRow?.count || 0,
+    totalNotes: notesRow?.count || 0,
+    totalTasks: tasksRow?.count || 0,
+    totalColors: colorsRow?.count || 0,
+  };
+}
+
+/**
+ * Safely purges all project records and their image files.
+ * Preserves user_preferences (name, profile picture, theme) and categories.
+ */
+export async function clearAllProjects() {
+  const db = await getDatabase();
+
+  // 1. Gather all local artwork image URIs to clean up files on disk
+  const [artworks, projects] = await Promise.all([
+    db.getAllAsync('SELECT image_uri FROM project_artworks WHERE image_uri IS NOT NULL'),
+    db.getAllAsync('SELECT image_uri FROM projects WHERE image_uri IS NOT NULL'),
+  ]);
+
+  const profileImgUri = await getProfileImageUri();
+
+  const allUris = new Set([
+    ...artworks.map((a) => a.image_uri),
+    ...projects.map((p) => p.image_uri),
+  ]);
+
+  // Clean up files (never delete profile image)
+  for (const uri of allUris) {
+    if (uri && uri !== profileImgUri) {
+      await deleteLocalImage(uri);
+    }
+  }
+
+  // 2. Clear tables
+  await db.execAsync(`
+    DELETE FROM project_notes;
+    DELETE FROM project_tasks;
+    DELETE FROM project_colors;
+    DELETE FROM project_artworks;
+    DELETE FROM projects;
+  `);
+
+  return true;
 }

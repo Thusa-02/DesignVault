@@ -167,6 +167,42 @@ export async function deleteLocalImage(fileUri) {
 }
 
 /**
+ * Allows the user to select and crop a profile avatar from their device gallery.
+ * Saves persistently to application storage.
+ * Returns the persistent file URI or null if cancelled.
+ */
+export async function pickAndSaveProfileImage() {
+  try {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        'Permission Needed',
+        'Photo gallery access is required to choose a profile avatar.'
+      );
+      return null;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+
+    if (result.canceled || !result.assets || result.assets.length === 0) {
+      return null;
+    }
+
+    const saved = await saveSingleAssetLocally(result.assets[0]);
+    return saved ? saved.image_uri : null;
+  } catch (error) {
+    console.error('[DesignVault] Error picking profile image:', error);
+    Alert.alert('Avatar Error', 'Failed to save profile picture.');
+    return null;
+  }
+}
+
+/**
  * Checks if a given file URI exists on the device.
  */
 export async function checkImageExists(fileUri) {

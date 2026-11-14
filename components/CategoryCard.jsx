@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { RADIUS, SHADOWS, SPACING } from '../constants/theme';
 
 export default function CategoryCard({
   category,
@@ -9,17 +10,24 @@ export default function CategoryCard({
   onPress,
   style,
 }) {
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
+
+  const catBg = category.bgColor || category.bg_color || '#EDE9FE';
+  const catColor = category.color || COLORS.primary;
+  const finalCatBg = isDark ? `${catColor}25` : catBg;
+
   return (
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={onPress}
       style={[styles.card, style]}
     >
-      <View style={[styles.iconContainer, { backgroundColor: category.bgColor }]}>
+      <View style={[styles.iconContainer, { backgroundColor: finalCatBg }]}>
         <MaterialCommunityIcons
           name={category.icon || 'palette'}
           size={28}
-          color={category.color || COLORS.primary}
+          color={catColor}
         />
       </View>
 
@@ -28,8 +36,8 @@ export default function CategoryCard({
           <Text style={styles.title} numberOfLines={1}>
             {category.name}
           </Text>
-          <View style={[styles.countBadge, { backgroundColor: category.bgColor }]}>
-            <Text style={[styles.countText, { color: category.color }]}>
+          <View style={[styles.countBadge, { backgroundColor: finalCatBg }]}>
+            <Text style={[styles.countText, { color: catColor }]}>
               {count} {count === 1 ? 'project' : 'projects'}
             </Text>
           </View>
@@ -52,7 +60,7 @@ export default function CategoryCard({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -60,6 +68,8 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: isDark ? COLORS.border : 'transparent',
     ...SHADOWS.card,
   },
   iconContainer: {

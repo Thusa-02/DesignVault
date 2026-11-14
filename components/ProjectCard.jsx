@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import StatusBadge from './StatusBadge';
 import ProjectImage from './ProjectImage';
 import { formatReadableDate } from './DatePickerField';
@@ -13,6 +14,9 @@ export default function ProjectCard({
   style,
   compact = false,
 }) {
+  const { colors: COLORS, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS, isDark), [COLORS, isDark]);
+
   const isFav = project.is_favorite === 1;
   const coverUri = project.cover_image_uri || project.image_uri;
   const artworkCount = project.artwork_count !== undefined
@@ -96,12 +100,14 @@ export default function ProjectCard({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDark) => StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
     overflow: 'hidden',
     marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: isDark ? COLORS.border : 'transparent',
     ...SHADOWS.card,
   },
   compactCard: {
@@ -126,7 +132,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     right: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: isDark ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 255, 255, 0.92)',
     borderRadius: RADIUS.full,
     padding: 7,
     ...SHADOWS.card,

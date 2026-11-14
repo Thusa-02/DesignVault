@@ -1,12 +1,24 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '../../constants/theme';
+import * as NavigationBar from 'expo-navigation-bar';
+import { useProjects } from '../../context/ProjectContext';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { themeColors, isDark } = useProjects();
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      try {
+        NavigationBar.setBackgroundColorAsync(themeColors.surface).catch(() => {});
+        NavigationBar.setButtonStyleAsync(isDark ? 'light' : 'dark').catch(() => {});
+        NavigationBar.setBorderColorAsync(themeColors.border).catch(() => {});
+      } catch (err) {}
+    }
+  }, [isDark, themeColors.surface, themeColors.border]);
 
   // Dynamic bottom padding to safely clear Android gesture navigation / navigation bars
   // and iOS home indicator without clipping labels.
@@ -18,12 +30,12 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textSecondary,
+        tabBarActiveTintColor: themeColors.primary,
+        tabBarInactiveTintColor: themeColors.textSecondary,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          backgroundColor: COLORS.surface,
-          borderTopColor: COLORS.border,
+          backgroundColor: themeColors.surface,
+          borderTopColor: themeColors.border,
           borderTopWidth: 1,
           height: tabHeight,
           paddingBottom: bottomPadding,

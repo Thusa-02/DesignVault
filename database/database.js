@@ -1,5 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { INITIAL_PROJECTS } from './seedData';
+import { CATEGORIES } from '../constants/categories';
 
 const DB_NAME = 'designvault.db';
 let dbInstance = null;
@@ -84,6 +85,17 @@ export async function initializeDatabase() {
       key TEXT PRIMARY KEY,
       value TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS categories (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      icon TEXT DEFAULT 'folder-outline',
+      color TEXT DEFAULT '#7C3AED',
+      bg_color TEXT DEFAULT '#EDE9FE',
+      description TEXT,
+      is_custom INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
   `);
 
   // Migrate any existing projects.image_uri records into project_artworks (idempotent, safe)
@@ -101,7 +113,38 @@ export async function initializeDatabase() {
 
   // Check if initial seeding is needed
   await seedInitialProjects();
+  await seedInitialCategories();
   await seedSampleFeatures();
+}
+
+/**
+ * Seeds initial category records if categories table is currently empty.
+ */
+export async function seedInitialCategories() {
+  const db = await getDatabase();
+  try {
+    const countRow = await db.getFirstAsync('SELECT COUNT(*) as count FROM categories');
+    if (countRow && countRow.count === 0) {
+      const now = new Date().toISOString();
+      for (const cat of CATEGORIES) {
+        await db.runAsync(
+          `INSERT OR IGNORE INTO categories (id, name, icon, color, bg_color, description, is_custom, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
+          [
+            cat.id,
+            cat.name,
+            cat.icon || 'folder-outline',
+            cat.color || '#7C3AED',
+            cat.bgColor || '#EDE9FE',
+            cat.description || '',
+            now,
+          ]
+        );
+      }
+    }
+  } catch (err) {
+    console.warn('[DesignVault] Note on categories seeding:', err?.message || err);
+  }
 }
 
 /**
