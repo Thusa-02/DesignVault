@@ -28,24 +28,57 @@ Graphic designers and creative students often manage several designs at once. Ke
 - **Three Themes** — Light, Dark, and Midnight Purple, including matching Android system-bar appearance.
 - **Offline Storage** — Keep project records in SQLite and artwork files in local app storage.
 
+
+## 📱 Application Screenshots
+
+### 🏠 Home Dashboard & Project Gallery
+
+| Home Dashboard | Project Gallery | Categories |
+|:---:|:---:|:---:|
+| <img src="assets/screenshots/home.jpeg" width="220"> | <img src="assets/screenshots/projects.jpeg" width="220"> | <img src="assets/screenshots/categories.jpeg" width="220"> |
+
+### 📝 Project Management
+
+| Add Project | Project Deadline | Project Details |
+|:---:|:---:|:---:|
+| <img src="assets/screenshots/add-project-top.jpeg" width="220"> | <img src="assets/screenshots/add-project-bottom.jpeg" width="220"> | <img src="assets/screenshots/project-details.jpeg" width="220"> |
+
+### 🎨 Creative Tools
+
+| Artworks & Tasks | Colour Palette & Notes | Add Colour |
+|:---:|:---:|:---:|
+| <img src="assets/screenshots/project-artworks.jpeg" width="220"> | <img src="assets/screenshots/project-tools.jpeg" width="220"> | <img src="assets/screenshots/color-palette.jpeg" width="220"> |
+
+### 📅 Deadline Tracker & Favourites
+
+| Deadline Dashboard | Favourite Designs |
+|:---:|:---:|
+| <img src="assets/screenshots/home-deadlines.jpeg" width="220"> | <img src="assets/screenshots/favourites.jpeg" width="220"> |
+
+### 👤 Profile & Personalization
+
+| My Profile | Application Settings |
+|:---:|:---:|
+| <img src="assets/screenshots/profile.jpeg" width="220"> | <img src="assets/screenshots/settings.jpeg" width="220"> |
+
 ---
 
 ## Technologies Used
 
-|          Layer / Purpose          |                  Technology                      |
-| --------------------------------- | ------------------------------------------------ |
-| Mobile framework                  | React Native `0.88.1`                            |
-| Development platform              | Expo SDK `~58.0.25`                              |
-| Navigation                        | Expo Router `~58.0.31`                           |
-| Language                          | JavaScript / JSX                                 |
-| Local database                    | `expo-sqlite` `~58.0.17`                         |
-| Artwork selection                 | `expo-image-picker`                              |
-| Local file management             | `expo-file-system`                               |
-| Date selection                    | `@react-native-community/datetimepicker` `9.2.1` |
-| Colour-code copying               | `expo-clipboard`                                 |
-| Icons                             | `@expo/vector-icons`                             |
-| Android navigation-bar appearance | `expo-navigation-bar`                            |
-| Version control                   | Git and GitHub                                   |
+| Layer / Purpose | Technology |
+| --- | --- |
+| Mobile framework | React Native `0.88.1` |
+| Development platform | Expo SDK `~58.0.25` |
+| Navigation | Expo Router `~58.0.31` |
+| Language | JavaScript / JSX |
+| Local database | `expo-sqlite` `~58.0.17` |
+| Artwork selection | `expo-image-picker` |
+| Local file management | `expo-file-system` |
+| Date selection | `@react-native-community/datetimepicker` `9.2.1` |
+| Colour-code copying | `expo-clipboard` |
+| Icons | `@expo/vector-icons` |
+| Android navigation-bar appearance | `expo-navigation-bar` |
+| Version control | Git and GitHub |
 
 > Package versions above are based on the supplied DesignVault documentation. The repository's current `package.json` and lockfile are the authoritative sources if versions change.
 
@@ -122,17 +155,17 @@ npx expo start --tunnel
 
 ## Application Screens
 
-|     Screen      |                           Main purpose                                  |
-| --------------- | ----------------------------------------------------------------------- |
-| Home            | Greeting, portfolio statistics, recent projects, and upcoming deadlines |
-| Projects        | Project gallery, search, filters, sorting, and grid/list presentation   |
-| Categories      | Browse and manage creative project categories                           |
-| Favourites      | View starred projects                                                   |
-| Add Project     | Create a project, choose artwork, and set dates                         |
-| Project Details | View artwork, deadlines, colour palettes, tasks, and notes              |
-| Edit Project    | Update project information and artwork                                  |
-| Profile         | Change display name/avatar and view portfolio statistics                |
-| Settings        | Choose theme, sorting/layout preferences, and manage app data           |
+| Screen | Main purpose |
+| --- | --- |
+| Home | Greeting, portfolio statistics, recent projects, and upcoming deadlines |
+| Projects | Project gallery, search, filters, sorting, and grid/list presentation |
+| Categories | Browse and manage creative project categories |
+| Favourites | View starred projects |
+| Add Project | Create a project, choose artwork, and set dates |
+| Project Details | View artwork, deadlines, colour palettes, tasks, and notes |
+| Edit Project | Update project information and artwork |
+| Profile | Change display name/avatar and view portfolio statistics |
+| Settings | Choose theme, sorting/layout preferences, and manage app data |
 
 ## Project Structure
 
@@ -173,15 +206,15 @@ DesignVault/
 
 DesignVault uses a local SQLite database (`designvault.db`) and stores artwork images in the application's file sandbox. The supplied architecture describes **Write-Ahead Logging (WAL)** and enabled foreign-key constraints.
 
-|       Table        |                       Purpose                                |
-| ------------------ | ------------------------------------------------------------ |
-| `projects`         | Core project information, including optional `deadline_date` |
-| `project_artworks` | Multiple images belonging to a project                       | 
-| `project_colors`   | Saved HEX colours for each project                           |
-| `project_tasks`    | Checklist items and completion flags                         |
-| `project_notes`    | Ideas, feedback, revisions, and general notes                |
-| `categories`       | Default and user-defined categories                          |
-| `user_preferences` | Local profile and app settings                               |
+| Table | Purpose |
+| --- | --- |
+| `projects` | Core project information, including optional `deadline_date` |
+| `project_artworks` | Multiple images belonging to a project |
+| `project_colors` | Saved HEX colours for each project |
+| `project_tasks` | Checklist items and completion flags |
+| `project_notes` | Ideas, feedback, revisions, and general notes |
+| `categories` | Default and user-defined categories |
+| `user_preferences` | Local profile and app settings |
 
 **Relationships:** Projects have one-to-many relationships with artworks, colours, tasks, and notes. Related rows are designed to be removed with cascading foreign-key deletion when a project is deleted.
 
@@ -193,22 +226,22 @@ DesignVault uses a local SQLite database (`designvault.db`) and stores artwork i
 
 Use the following manual checks when reviewing the application:
 
-|        Test         |               Action                   |                Expected result                   |
-| ------------------- | -------------------------------------- | ------------------------------------------------ |
-| Create project      | Add a title, category, and description | Project appears in the gallery                   |
-| Edit project        | Change project details                 | Updated details persist                          |
-| Add artworks        | Select multiple images                 | Images appear in the project gallery             |
-| Gallery viewer      | Open, swipe, and zoom artwork          | Artwork navigation and zoom work                 |
-| Favourite           | Star a project                         | Project appears in Favourites                    |
-| Colour palette      | Add a HEX swatch and tap to copy       | Swatch is saved and code is copied               |
-| Checklist           | Add and complete tasks                 | Progress percentage updates                      |
-| Notes               | Add an Idea or Feedback note           | Note is saved and can be edited                  |
-| Deadline            | Set a future, current, or past date    | Appropriate deadline indicator appears           |
-| Deadline editing    | Change or clear a deadline             | Updated value persists                           |
-| Category management | Rename a custom category               | Associated projects remain correctly categorized |
-| Theme               | Switch between all three themes        | Screens and navigation remain readable           |
-| Offline access      | Open saved projects without internet   | Existing local data remains accessible           |
-| Persistence         | Restart the app                        | Saved data and preferences remain available      |
+| Test | Action | Expected result |
+| --- | --- | --- |
+| Create project | Add a title, category, and description | Project appears in the gallery |
+| Edit project | Change project details | Updated details persist |
+| Add artworks | Select multiple images | Images appear in the project gallery |
+| Gallery viewer | Open, swipe, and zoom artwork | Artwork navigation and zoom work |
+| Favourite | Star a project | Project appears in Favourites |
+| Colour palette | Add a HEX swatch and tap to copy | Swatch is saved and code is copied |
+| Checklist | Add and complete tasks | Progress percentage updates |
+| Notes | Add an Idea or Feedback note | Note is saved and can be edited |
+| Deadline | Set a future, current, or past date | Appropriate deadline indicator appears |
+| Deadline editing | Change or clear a deadline | Updated value persists |
+| Category management | Rename a custom category | Associated projects remain correctly categorized |
+| Theme | Switch between all three themes | Screens and navigation remain readable |
+| Offline access | Open saved projects without internet | Existing local data remains accessible |
+| Persistence | Restart the app | Saved data and preferences remain available |
 
 ### Suggested validation commands
 
